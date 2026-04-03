@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="FB_BlueDiverter" Id="{17d30996-a73b-4b18-9eb8-be7fe6182d8a}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_BlueDiverter EXTENDS FB_BaseDiverter
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+END_VAR
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="Sort" Id="{e325922e-9899-40ef-84bb-78d6b94a08f2}">
+      <Declaration><![CDATA[METHOD PUBLIC Sort
+VAR_INPUT
+    color : E_Color;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF color = E_Color.BLUE THEN
+    Start();
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

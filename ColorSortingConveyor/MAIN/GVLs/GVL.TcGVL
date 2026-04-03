@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <GVL Name="GVL" Id="{aa48bf9c-aed2-468f-8ef2-bcf9df62a85b}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+VAR_GLOBAL
+
+    (* color inputs for each machine *)
+    colorMachine : ARRAY[1..10] OF INT;
+
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

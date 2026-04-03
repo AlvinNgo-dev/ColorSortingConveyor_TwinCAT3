@@ -1,0 +1,70 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="FB_BaseDiverter" Id="{6ac4f98e-5856-4f72-bcb6-80ab840b0b86}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_BaseDiverter IMPLEMENTS I_Actuator
+VAR
+    bEnabled : BOOL;
+    bActive : BOOL;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="Disable" Id="{a80962d5-c493-4df1-96b8-45274d7493d3}">
+      <Declaration><![CDATA[METHOD Disable : bool
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[bEnabled := FALSE;
+bActive := FALSE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Enable" Id="{bc6f8fcd-9ef2-4260-aced-3e6b1c7bd973}">
+      <Declaration><![CDATA[METHOD Enable : bool
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[bEnabled := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Init" Id="{94c0a34b-9fae-402c-8f08-cf7bc5df61fb}">
+      <Declaration><![CDATA[METHOD Init : bool
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Start" Id="{b70e79c5-5d4e-4623-b435-ebf672011738}">
+      <Declaration><![CDATA[METHOD Start : bool
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF bEnabled THEN
+    bActive := TRUE;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Stop" Id="{f383ec56-0136-435e-9a68-7b6f7ccccdc9}">
+      <Declaration><![CDATA[METHOD Stop : bool
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[bActive := FALSE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Update" Id="{1182cb1e-ebb7-4c3e-a294-e7831cf0baf2}">
+      <Declaration><![CDATA[METHOD Update : bool
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

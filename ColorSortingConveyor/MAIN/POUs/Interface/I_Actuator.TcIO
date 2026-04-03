@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <Itf Name="I_Actuator" Id="{ee4b77db-2f06-45ab-acc6-e79bd2b64c95}">
+    <Declaration><![CDATA[INTERFACE I_Actuator EXTENDS I_Device
+
+]]></Declaration>
+    <Method Name="Start" Id="{0696696c-f68d-49af-b839-36eaf39c0aa7}">
+      <Declaration><![CDATA[METHOD Start : bool
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="Stop" Id="{b02047bc-d8d7-4e58-8220-ea5b2536317c}">
+      <Declaration><![CDATA[METHOD Stop : bool
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+  </Itf>
+</TcPlcObject>

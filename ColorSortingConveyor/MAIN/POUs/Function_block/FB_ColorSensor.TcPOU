@@ -1,0 +1,49 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="FB_ColorSensor" Id="{5ae99127-fa76-4c3f-b951-89aee2bd003c}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ColorSensor
+
+VAR_INPUT
+    sensorID : INT;
+END_VAR
+
+VAR
+    _color : E_Color := E_Color.UNKNOWN;
+    rawColor : INT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="GetColor" Id="{5072c6b2-9a74-455e-be91-06446b9b4f25}">
+      <Declaration><![CDATA[METHOD PUBLIC GetColor : E_Color
+VAR
+    colorValue : INT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[(* read color from global array *)
+rawColor := GVL.colorMachine[sensorID];
+
+CASE rawColor OF
+    1: _color := E_Color.RED;
+    2: _color := E_Color.BLUE;
+    3: _color := E_Color.YELLOW;
+ELSE
+    _color := E_Color.UNKNOWN;
+END_CASE
+
+GetColor := _color;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SetColor" Id="{d1d9efb4-1a66-4371-820c-b3be2e33d0a7}">
+      <Declaration><![CDATA[METHOD PUBLIC SetColor
+VAR_INPUT
+    newColor : INT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF newColor >= 0 AND newColor <= 4 THEN
+    _color := newColor;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

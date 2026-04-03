@@ -1,0 +1,82 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="FB_Conveyor" Id="{e00c0afe-0881-4a47-afe2-90d576be7e63}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Conveyor IMPLEMENTS I_actuator
+VAR
+    bEnabled : BOOL;
+    bRunning : BOOL;
+	bDisabled : BOOL;
+END_VAR
+
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="Disable" Id="{6e586afe-8ebe-4907-a3db-d639603c3eea}">
+      <Declaration><![CDATA[METHOD Disable : bool
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[bDisabled := true;
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Enable" Id="{5893a5f0-da79-4b0b-82b7-1d272ee67f61}">
+      <Declaration><![CDATA[METHOD Enable : bool
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[bEnabled := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Init" Id="{330c59b6-b0a2-4d14-8ff5-66341457b5bf}">
+      <Declaration><![CDATA[METHOD Init : bool
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[bEnabled := FALSE;
+bRunning := FALSE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Start" Id="{fb0a2b4f-c51a-4b67-8b87-ddedd7c020db}">
+      <Declaration><![CDATA[METHOD Start : bool
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF bEnabled THEN
+    bRunning := TRUE;
+	bDisabled := FALSE;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Stop" Id="{791c2abf-0ecb-4492-a591-d7b52ea55ce4}">
+      <Declaration><![CDATA[METHOD Stop : bool
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF bDisabled THEN 
+	bRunning := FALSE;
+	bEnabled := FALSE;
+END_IF;
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Update" Id="{faf0b631-5f22-4c95-bee6-01bd10fabeaa}">
+      <Declaration><![CDATA[METHOD Update : bool
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT bEnabled THEN
+    bRunning := FALSE;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

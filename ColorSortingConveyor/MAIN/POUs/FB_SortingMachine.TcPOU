@@ -1,0 +1,66 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="FB_SortingMachine" Id="{311e8bd3-1f65-4fff-95a3-fdb637310848}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_SortingMachine
+
+VAR_INPUT
+    machineID : INT;
+END_VAR
+
+VAR
+    (* Machine Components *)
+    conveyor        : FB_Conveyor;
+    sensor : FB_ColorSensor;
+    currentColor : E_Color;
+	
+    redDiverter     : FB_RedDiverter;
+    blueDiverter    : FB_BlueDiverter;
+	yellowDiverter    : FB_YellowDiverter;
+    rejectDiverter  : FB_RejectDiverter;
+
+    (* Machine Status *)
+    bInitialized : BOOL ;
+    bEnabled     : BOOL;
+	bDisabled    : BOOL;
+
+    (* Loop Index *)
+    i : INT;
+
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[sensor(sensorID := machineID);
+
+currentColor := sensor.GetColor();
+
+
+(* Sorting decision *)
+CASE currentColor OF
+
+    E_Color.RED:
+        redDiverter.Start();
+		blueDiverter.Stop();
+		yellowDiverter.Stop();
+		rejectDiverter.Stop();
+    E_Color.BLUE:
+        blueDiverter.Start();
+		redDiverter.Stop();
+		yellowDiverter.STop();
+		rejectDiverter.Stop();
+	E_Color.YELLOW:
+		yellowDiverter.Start();
+		blueDiverter.Stop();
+		redDiverter.Stop();
+		rejectDiverter.Stop();
+    ELSE
+        rejectDiverter.Start();
+		redDiverter.Stop();
+		blueDiverter.Stop();
+		yellowDiverter.Stop();
+END_CASE
+
+
+(* Conveyor always running *)
+conveyor.Start();]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

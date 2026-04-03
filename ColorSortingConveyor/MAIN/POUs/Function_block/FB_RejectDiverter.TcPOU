@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="FB_RejectDiverter" Id="{2c50ebb7-0f1c-445b-96b8-a59dcc083a25}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_RejectDiverter EXTENDS FB_BaseDiverter
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+END_VAR
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="Sort" Id="{2ca6874e-f402-447f-bb5a-29ae81e4b4f6}">
+      <Declaration><![CDATA[METHOD PUBLIC Sort
+VAR_INPUT
+    color : E_Color;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF color = E_Color.UNKNOWN THEN
+    Start();
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

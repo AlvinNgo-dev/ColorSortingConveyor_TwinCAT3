@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <Itf Name="I_Device" Id="{22acd9b2-801d-4255-af02-aa917c343cb7}">
+    <Declaration><![CDATA[
+INTERFACE I_Device
+]]></Declaration>
+    <Method Name="Disable" Id="{c1885dec-47ae-4f67-82bb-b5f267a6bb3b}">
+      <Declaration><![CDATA[METHOD Disable : bool
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="Enable" Id="{bb68bec4-22cd-4c90-90fd-577cff0dc9aa}">
+      <Declaration><![CDATA[METHOD Enable : bool
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="Init" Id="{586eeb72-004f-478a-90e1-1dfc38e6e530}">
+      <Declaration><![CDATA[METHOD Init : bool
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="Update" Id="{8cb957b7-715c-48fb-8e7d-4bafd46d9bbc}">
+      <Declaration><![CDATA[METHOD Update : bool
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+  </Itf>
+</TcPlcObject>

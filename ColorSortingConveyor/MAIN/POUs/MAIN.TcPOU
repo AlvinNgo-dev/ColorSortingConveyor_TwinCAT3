@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="MAIN" Id="{67f882fd-9727-4250-b183-8627148893e5}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM MAIN
+VAR
+    machine1 : FB_SortingMachine;
+    machine2 : FB_SortingMachine;
+    machine3 : FB_SortingMachine;
+END_VAR
+
+
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[machine1(machineID := 1);
+machine2(machineID := 2);
+machine3(machineID := 3);]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

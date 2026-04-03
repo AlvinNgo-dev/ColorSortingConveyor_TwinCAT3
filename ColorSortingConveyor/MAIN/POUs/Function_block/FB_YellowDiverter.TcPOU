@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="FB_YellowDiverter" Id="{abfc6988-f2d6-4dca-a0b4-d62c309240cd}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_YellowDiverter EXTENDS FB_BaseDiverter
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+END_VAR
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="Sort" Id="{80501692-01ff-4e64-8cba-106992f3d97b}">
+      <Declaration><![CDATA[METHOD PUBLIC Sort
+VAR_INPUT
+    color : E_Color;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF color = E_Color.YELLOW THEN
+    Start();
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>
