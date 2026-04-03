@@ -1,2 +1,3 @@
 # ColorSortingConveyor_TwinCAT3
-<img width="939" height="372" alt="image" src="https://github.com/user-attachments/assets/a90c8a45-090c-425c-8574-9fc60f3e2802" />
+<img width="474" height="284" alt="image" src="https://github.com/user-attachments/assets/763e576f-023a-4ce6-96c3-f019c70ab29a" />
+
