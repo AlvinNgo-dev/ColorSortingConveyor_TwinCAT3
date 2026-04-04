@@ -56,6 +56,7 @@ Modify conveyor speed and timing parameters in the main program.
 
 📊 System Analysis & Performance
 Sorting Performance (Typical Values)
+
 <img width="342" height="146" alt="image" src="https://github.com/user-attachments/assets/bed09fbf-47d0-459b-a9ed-f1f243b453fa" />
 
 State Diagram (High-level)
