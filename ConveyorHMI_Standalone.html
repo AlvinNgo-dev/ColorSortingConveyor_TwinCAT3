@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Color Sorting Conveyor — TwinCAT HMI</title>
+<style>
+/* ══════════════════════════════════════════════════════════════
+   DESIGN TOKENS
+══════════════════════════════════════════════════════════════ */
+:root{
+  --bg        :#0d1117;
+  --surface   :#161b22;
+  --surface2  :#1c2128;
+  --border    :#30363d;
+  --text      :#e6edf3;
+  --muted     :#8b949e;
+  --accent    :#388bfd;
+  --green     :#3fb950;
+
+  --red       :#ff6b6b;
+  --red-dim   :#ff6b6b30;
+  --yellow    :#ffd93d;
+  --yellow-dim:#ffd93d30;
+  --blue      :#4fc3f7;
+  --blue-dim  :#4fc3f730;
+  --gray      :#9e9e9e;
+  --gray-dim  :#9e9e9e28;
+
+  /* belt */
+  --belt-bg   :#21262d;
+  --belt-line :#2d333b;
+  --roller    :#484f58;
+  --roller-hi :#656d76;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RESET & BASE
+══════════════════════════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Segoe UI',system-ui,sans-serif;
+  display:grid;
+  grid-template-rows:56px 1fr 120px;
+  grid-template-columns:1fr 280px;
+  grid-template-areas:
+    "hdr  hdr"
+    "main side"
+    "log  side";
+  gap:0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   HEADER
+══════════════════════════════════════════════════════════════ */
+header{
+  grid-area:hdr;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 24px;
+  gap:16px;
+}
+header h1{
+  font-size:17px;
+  font-weight:600;
+  letter-spacing:.3px;
+}
+header h1 em{color:var(--accent);font-style:normal}
+.hdr-right{display:flex;align-items:center;gap:12px}
+.pill{
+  display:flex;align-items:center;gap:7px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:20px;padding:5px 13px;
+  font-size:12px;color:var(--muted);
+}
+.pill-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--green);box-shadow:0 0 6px var(--green);
+  animation:blink 2s ease-in-out infinite;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.pill-dot.warn{background:#e3b341;box-shadow:0 0 6px #e3b341}
+.pill-dot.err {background:#f85149;box-shadow:0 0 6px #f85149;animation:none}
+
+/* ══════════════════════════════════════════════════════════════
+   MAIN CANVAS (belt scene)
+══════════════════════════════════════════════════════════════ */
+main{
+  grid-area:main;
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  padding:20px 20px 12px;
+  overflow:hidden;
+}
+.scene-label{
+  font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:1.2px;color:var(--muted);margin-bottom:14px;
+}
+
+/* SVG fills the rest of main */
+#svgWrap{flex:1;position:relative}
+#cvSvg{width:100%;height:100%;display:block;overflow:visible}
+
+/* ══════════════════════════════════════════════════════════════
+   EVENT LOG
+══════════════════════════════════════════════════════════════ */
+.log-area{
+  grid-area:log;
+  background:var(--surface);
+  border-top:1px solid var(--border);
+  border-right:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.log-header{
+  padding:6px 14px;
+  font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:1px;color:var(--muted);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.log-scroll{
+  flex:1;overflow-y:auto;
+  display:flex;flex-direction:column-reverse;
+  padding:6px 14px;
+  font-family:monospace;font-size:11.5px;
+  scrollbar-width:thin;scrollbar-color:var(--border) transparent;
+}
+.log-entry{line-height:1.75;white-space:nowrap}
+.log-entry.red    {color:var(--red)}
+.log-entry.yellow {color:var(--yellow)}
+.log-entry.blue   {color:var(--blue)}
+.log-entry.unknown{color:var(--gray)}
+.log-entry.sys    {color:var(--muted)}
+
+/* ══════════════════════════════════════════════════════════════
+   SIDE PANEL
+══════════════════════════════════════════════════════════════ */
+aside{
+  grid-area:side;
+  background:var(--surface);
+  border-left:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow-y:auto;
+  padding:16px 14px;
+  gap:14px;
+  scrollbar-width:thin;scrollbar-color:var(--border) transparent;
+}
+.card{
+  background:var(--bg);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:14px 12px;
+  display:flex;flex-direction:column;gap:10px;
+}
+.card-title{
+  font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:1px;color:var(--muted);
+}
+
+/* ── toggle buttons ── */
+.tbtn{
+  width:100%;padding:9px 12px;
+  border-radius:7px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text);
+  font-size:12px;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between;
+  transition:background .15s,border-color .15s;
+}
+.tbtn:hover{background:var(--surface2)}
+.tbtn .led{
+  width:9px;height:9px;border-radius:50%;
+  background:var(--border);flex-shrink:0;
+  transition:background .2s,box-shadow .2s;
+}
+.tbtn.on .led{background:var(--green);box-shadow:0 0 7px var(--green)}
+.tbtn.on{border-color:#3fb95055}
+
+/* ── reset button ── */
+.rbtn{
+  width:100%;padding:9px;border-radius:7px;
+  border:1px solid #f8514940;
+  background:transparent;color:#f85149;
+  font-size:12px;font-weight:600;cursor:pointer;
+  transition:background .15s;
+}
+.rbtn:hover{background:#f8514915}
+
+/* ── speed slider ── */
+.slider-wrap{display:flex;flex-direction:column;gap:5px}
+.slider-wrap .row{
+  display:flex;justify-content:space-between;
+  font-size:11px;color:var(--muted);
+}
+.slider-wrap .row span{color:var(--text);font-weight:600}
+input[type=range]{
+  -webkit-appearance:none;width:100%;height:4px;
+  border-radius:4px;background:var(--border);outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+  background:var(--accent);cursor:pointer;
+}
+
+/* ── countdown ring ── */
+.ring-wrap{display:flex;flex-direction:column;align-items:center;gap:4px}
+.ring-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+.ring-svg{width:84px;height:84px}
+.ring-bg  {fill:none;stroke:var(--border);stroke-width:7}
+.ring-arc {
+  fill:none;stroke:var(--accent);stroke-width:7;stroke-linecap:round;
+  transform:rotate(-90deg);transform-origin:50% 50%;
+  transition:stroke-dashoffset .22s linear;
+}
+.ring-num {font-size:19px;font-weight:700;fill:var(--text);text-anchor:middle;dominant-baseline:central}
+.ring-unit{font-size:9px;fill:var(--muted);text-anchor:middle}
+
+/* ── detection badge ── */
+.det-badge{
+  padding:10px 8px;border-radius:8px;text-align:center;
+  font-size:15px;font-weight:700;letter-spacing:.8px;
+  border:1.5px solid var(--border);
+  transition:all .25s;
+}
+
+/* ── bin counters ── */
+.bin-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bin{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:10px 8px 8px;
+  display:flex;flex-direction:column;align-items:center;gap:1px;
+  position:relative;overflow:hidden;
+}
+.bin::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  border-radius:3px 3px 0 0;
+}
+.bin.red::before    {background:var(--red)}
+.bin.yellow::before {background:var(--yellow)}
+.bin.blue::before   {background:var(--blue)}
+.bin.unknown::before{background:var(--gray)}
+.bin .bn{font-size:9px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+.bin .bv{font-size:28px;font-weight:800;line-height:1;transition:transform .15s}
+.bin.red    .bv{color:var(--red)}
+.bin.yellow .bv{color:var(--yellow)}
+.bin.blue   .bv{color:var(--blue)}
+.bin.unknown.bv{color:var(--gray)}
+.total-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:9px 10px;
+  background:var(--surface);border:1px solid #388bfd44;border-radius:8px;
+}
+.total-row .tl{font-size:11px;color:var(--muted)}
+.total-row .tv{font-size:20px;font-weight:800;color:var(--accent)}
+
+/* ── throughput sparkline ── */
+.spark-wrap{
+  height:52px;display:flex;align-items:flex-end;gap:2px;
+}
+.spark-bar{
+  flex:1;border-radius:3px 3px 0 0;min-height:2px;
+  transition:height .35s ease,background .35s;
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     HEADER
+══════════════════════════════════════════════════════════════ -->
+<header>
+  <h1>Color Sorting Conveyor &nbsp;—&nbsp; <em>TwinCAT HMI</em></h1>
+  <div class="hdr-right">
+    <div class="pill">
+      <div class="pill-dot" id="statusDot"></div>
+      <span id="statusText">Simulation Running</span>
+    </div>
+    <div class="pill" style="gap:10px">
+      <span style="color:var(--muted)">Cycle</span>
+      <span id="cycleMs" style="font-weight:600;color:var(--text)">10 ms</span>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════════════════
+     MAIN CANVAS
+══════════════════════════════════════════════════════════════ -->
+<main>
+  <div class="scene-label">Live Conveyor View — Scale 1:1 mm</div>
+  <div id="svgWrap">
+    <svg id="cvSvg" viewBox="0 0 1280 320" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="beltGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stop-color="#2d333b"/>
+          <stop offset="100%" stop-color="#1c2128"/>
+        </linearGradient>
+        <radialGradient id="rolGrad">
+          <stop offset="20%" stop-color="#656d76"/>
+          <stop offset="100%" stop-color="#21262d"/>
+        </radialGradient>
+        <!-- glow filter for items and active diverters -->
+        <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="6" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="glowSm" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="3" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <clipPath id="beltClip">
+          <rect x="28" y="118" width="1224" height="64"/>
+        </clipPath>
+      </defs>
+
+      <!-- ─── Ground shadow ─── -->
+      <ellipse cx="640" cy="290" rx="620" ry="12" fill="#00000060"/>
+
+      <!-- ─── Support legs ─── -->
+      <g fill="#21262d" stroke="#30363d" stroke-width="1">
+        <rect x="70"  y="182" width="14" height="72" rx="3"/>
+        <rect x="620" y="182" width="14" height="72" rx="3"/>
+        <rect x="1196" y="182" width="14" height="72" rx="3"/>
+        <rect x="55"  y="248" width="44" height="7" rx="2"/>
+        <rect x="605" y="248" width="44" height="7" rx="2"/>
+        <rect x="1181" y="248" width="44" height="7" rx="2"/>
+      </g>
+
+      <!-- ─── Belt body ─── -->
+      <rect x="28" y="118" width="1224" height="64"
+            rx="8" fill="url(#beltGrad)" stroke="#30363d" stroke-width="1.5"/>
+
+      <!-- ─── Belt stripes (animated by JS) ─── -->
+      <g id="stripes" clip-path="url(#beltClip)"/>
+
+      <!-- ─── Drive/idler rollers ─── -->
+      <ellipse cx="28"  cy="150" rx="34" ry="34" fill="url(#rolGrad)" stroke="#484f58" stroke-width="2"/>
+      <ellipse cx="28"  cy="150" rx="11" ry="11" fill="#0d1117"/>
+      <ellipse cx="1252" cy="150" rx="34" ry="34" fill="url(#rolGrad)" stroke="#484f58" stroke-width="2"/>
+      <ellipse cx="1252" cy="150" rx="11" ry="11" fill="#0d1117"/>
+
+      <!-- ─── INFEED chute ─── -->
+      <path d="M28 118 L28 72 L4 72" stroke="#484f58" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <text x="6" y="65" font-size="9" fill="#484f58" font-family="monospace">INFEED</text>
+
+      <!-- ════════════════════════════════════
+           COLOUR SENSOR   pos=200 → x=228
+      ════════════════════════════════════ -->
+      <!-- sensor housing top -->
+      <rect x="216" y="98" width="24" height="18" rx="4"
+            fill="#003322" stroke="#00cc66" stroke-width="1.2"/>
+      <text x="228" y="109" font-size="8" fill="#00cc66"
+            text-anchor="middle" font-family="monospace">▼</text>
+      <!-- beam -->
+      <line id="sensorBeam" x1="228" y1="116" x2="228" y2="182"
+            stroke="#00cc66" stroke-width="1.5"
+            stroke-dasharray="4 3" opacity=".55"/>
+      <!-- sensor housing bottom -->
+      <rect x="216" y="182" width="24" height="18" rx="4"
+            fill="#003322" stroke="#00cc66" stroke-width="1.2"/>
+      <text x="228" y="196" font-size="7" fill="#00cc66"
+            text-anchor="middle" font-family="monospace">▲</text>
+      <text x="228" y="212" font-size="9" fill="#00cc66"
+            text-anchor="middle" font-family="monospace">SENSOR</text>
+      <text x="228" y="223" font-size="8" fill="#484f58"
+            text-anchor="middle" font-family="monospace">200mm</text>
+
+      <!-- ════════════════════════════════════
+           RED SORTER   pos=380 → x=408
+      ════════════════════════════════════ -->
+      <g id="gRed">
+        <!-- blade -->
+        <line id="bladeRed" x1="408" y1="118" x2="408" y2="182"
+              stroke="#ff6b6b" stroke-width="3" stroke-linecap="round" opacity=".5"/>
+        <!-- chute arrow -->
+        <path d="M420 118 Q440 90 468 72" stroke="#ff6b6b" stroke-width="1.5"
+              fill="none" stroke-dasharray="5 3" opacity=".6"/>
+        <!-- bin label -->
+        <rect x="462" y="58" width="52" height="18" rx="4"
+              fill="#1a0505" stroke="#ff6b6b" stroke-width="1"/>
+        <text x="488" y="70" font-size="9" fill="#ff6b6b"
+              text-anchor="middle" font-family="monospace" font-weight="700">RED BIN</text>
+        <text x="408" y="212" font-size="9" fill="#ff6b6b"
+              text-anchor="middle" font-family="monospace">380mm</text>
+        <!-- flash ring (shown on sort) -->
+        <circle id="flashRed" cx="408" cy="150" r="36" fill="#ff6b6b" opacity="0"/>
+      </g>
+
+      <!-- ════════════════════════════════════
+           YELLOW SORTER  pos=610 → x=638
+      ════════════════════════════════════ -->
+      <g id="gYellow">
+        <line id="bladeYellow" x1="638" y1="118" x2="638" y2="182"
+              stroke="#ffd93d" stroke-width="3" stroke-linecap="round" opacity=".5"/>
+        <path d="M650 118 Q670 90 698 72" stroke="#ffd93d" stroke-width="1.5"
+              fill="none" stroke-dasharray="5 3" opacity=".6"/>
+        <rect x="692" y="58" width="68" height="18" rx="4"
+              fill="#161200" stroke="#ffd93d" stroke-width="1"/>
+        <text x="726" y="70" font-size="9" fill="#ffd93d"
+              text-anchor="middle" font-family="monospace" font-weight="700">YELLOW BIN</text>
+        <text x="638" y="212" font-size="9" fill="#ffd93d"
+              text-anchor="middle" font-family="monospace">610mm</text>
+        <circle id="flashYellow" cx="638" cy="150" r="36" fill="#ffd93d" opacity="0"/>
+      </g>
+
+      <!-- ════════════════════════════════════
+           BLUE SORTER    pos=840 → x=868
+      ════════════════════════════════════ -->
+      <g id="gBlue">
+        <line id="bladeBlue" x1="868" y1="118" x2="868" y2="182"
+              stroke="#4fc3f7" stroke-width="3" stroke-linecap="round" opacity=".5"/>
+        <path d="M880 118 Q900 90 928 72" stroke="#4fc3f7" stroke-width="1.5"
+              fill="none" stroke-dasharray="5 3" opacity=".6"/>
+        <rect x="922" y="58" width="58" height="18" rx="4"
+              fill="#001420" stroke="#4fc3f7" stroke-width="1"/>
+        <text x="951" y="70" font-size="9" fill="#4fc3f7"
+              text-anchor="middle" font-family="monospace" font-weight="700">BLUE BIN</text>
+        <text x="868" y="212" font-size="9" fill="#4fc3f7"
+              text-anchor="middle" font-family="monospace">840mm</text>
+        <circle id="flashBlue" cx="868" cy="150" r="36" fill="#4fc3f7" opacity="0"/>
+      </g>
+
+      <!-- ════════════════════════════════════
+           UNKNOWN SORTER pos=1060 → x=1088
+      ════════════════════════════════════ -->
+      <g id="gUnknown">
+        <line id="bladeUnknown" x1="1088" y1="118" x2="1088" y2="182"
+              stroke="#9e9e9e" stroke-width="3" stroke-linecap="round" opacity=".5"/>
+        <path d="M1100 118 Q1120 90 1148 72" stroke="#9e9e9e" stroke-width="1.5"
+              fill="none" stroke-dasharray="5 3" opacity=".6"/>
+        <rect x="1140" y="56" width="86" height="18" rx="4"
+              fill="#111" stroke="#9e9e9e" stroke-width="1"/>
+        <text x="1183" y="68" font-size="9" fill="#9e9e9e"
+              text-anchor="middle" font-family="monospace" font-weight="700">UNKNOWN BIN</text>
+        <text x="1088" y="212" font-size="9" fill="#9e9e9e"
+              text-anchor="middle" font-family="monospace">1060mm</text>
+        <circle id="flashUnknown" cx="1088" cy="150" r="36" fill="#9e9e9e" opacity="0"/>
+      </g>
+
+      <!-- ─── Travelling item (hidden until active) ─── -->
+      <circle id="itemCircle" cx="-80" cy="150" r="26"
+              fill="#888" opacity="0" filter="url(#glow)"/>
+      <text   id="itemLabel"  x="-80"  y="150"
+              font-size="13" font-weight="800"
+              text-anchor="middle" dominant-baseline="central"
+              fill="#0d1117" opacity="0"/>
+
+      <!-- ─── Sensor flash highlight ─── -->
+      <line id="sensorFlash" x1="228" y1="116" x2="228" y2="182"
+            stroke="#00ff88" stroke-width="3" opacity="0"/>
+    </svg>
+  </div>
+</main>
+
+<!-- ══════════════════════════════════════════════════════════
+     EVENT LOG
+══════════════════════════════════════════════════════════════ -->
+<div class="log-area">
+  <div class="log-header">Event Log</div>
+  <div class="log-scroll" id="logScroll">
+    <div class="log-entry sys">[00:00:00.000]  System initialised — waiting for first item…</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SIDE PANEL
+══════════════════════════════════════════════════════════════ -->
+<aside>
+
+  <!-- Controls -->
+  <div class="card">
+    <div class="card-title">Controls</div>
+    <button class="tbtn on" id="btnSim"  onclick="toggleSim()">
+      Simulation<span class="led"></span>
+    </button>
+    <button class="tbtn on" id="btnBelt" onclick="toggleBelt()">
+      Belt Motor<span class="led"></span>
+    </button>
+    <div class="slider-wrap">
+      <div class="row">Belt Speed <span id="speedLbl">150</span> mm/s</div>
+      <input type="range" id="speedSlider"
+             min="50" max="400" step="5" value="150"
+             oninput="setSpeed(+this.value)"/>
+    </div>
+    <button class="rbtn" onclick="resetCounters()">↺  Reset Counters</button>
+  </div>
+
+  <!-- Countdown ring -->
+  <div class="card">
+    <div class="card-title">Next Item</div>
+    <div class="ring-wrap">
+      <svg class="ring-svg" viewBox="0 0 84 84">
+        <circle class="ring-bg"  cx="42" cy="42" r="33"/>
+        <circle class="ring-arc" id="ringArc" cx="42" cy="42" r="33"
+                stroke-dasharray="207.3" stroke-dashoffset="0"/>
+        <text class="ring-num"  id="ringNum"  x="42" y="39">–</text>
+        <text class="ring-unit" id="ringUnit" x="42" y="54">sec</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Last detection -->
+  <div class="card">
+    <div class="card-title">Last Detection</div>
+    <div class="det-badge" id="detBadge">— WAITING —</div>
+  </div>
+
+  <!-- Bin counters -->
+  <div class="card">
+    <div class="card-title">Bin Counters</div>
+    <div class="bin-grid">
+      <div class="bin red">
+        <div class="bn">Red</div>
+        <div class="bv" id="cRed">0</div>
+      </div>
+      <div class="bin yellow">
+        <div class="bn">Yellow</div>
+        <div class="bv" id="cYellow">0</div>
+      </div>
+      <div class="bin blue">
+        <div class="bn">Blue</div>
+        <div class="bv" id="cBlue">0</div>
+      </div>
+      <div class="bin unknown">
+        <div class="bn">Unknown</div>
+        <div class="bv" id="cUnknown">0</div>
+      </div>
+    </div>
+    <div class="total-row">
+      <span class="tl">Total Sorted</span>
+      <span class="tv" id="cTotal">0</span>
+    </div>
+  </div>
+
+  <!-- Throughput sparkline -->
+  <div class="card">
+    <div class="card-title">Throughput (last 24 items)</div>
+    <div class="spark-wrap" id="spark"></div>
+  </div>
+
+</aside>
+
+<!-- ══════════════════════════════════════════════════════════
+     JAVASCRIPT — mirrors PLC logic exactly
+     When connected to a real TwinCAT runtime, replace the
+     simulation loop with TcHmiClient / ADS subscriptions.
+══════════════════════════════════════════════════════════════ -->
+<script>
+"use strict";
+
+/* ────────────────────────────────────────────────
+   PLC GVL_Sim mirror
+────────────────────────────────────────────────── */
+const G = {
+  bSimEnable  : true,
+  bBeltRunCmd : true,
+  rBeltSpeed  : 150,           // mm/s
+
+  bItemOnBelt         : false,
+  eItemColor          : 0,
+  rItemPosMM          : 0,
+  bColorSensorFired   : false,
+  eDetectedColor      : 0,
+  bActuatorRed        : false,
+  bActuatorYellow     : false,
+  bActuatorBlue       : false,
+  bActuatorUnknown    : false,
+
+  nCountRed    : 0,  nCountYellow : 0,
+  nCountBlue   : 0,  nCountUnknown: 0,
+  nCountTotal  : 0,
+
+  rPos_Sensor     : 200,
+  rPos_ActRed     : 380,
+  rPos_ActYellow  : 610,
+  rPos_ActBlue    : 840,
+  rPos_ActUnknown : 1060,
+  rPos_Exit       : 1260,
+
+  sDetectedName : '',
+  rNextItemSec  : 0,
+};
+
+/* ────────────────────────────────────────────────
+   E_Color enum
+────────────────────────────────────────────────── */
+const EC = {None:0, Red:1, Yellow:2, Blue:3, Unknown:4};
+const META = {
+  [EC.Red]    :{ name:'RED',     css:'#ff6b6b', cls:'red',     lbl:'R', flash:'flashRed',     blade:'bladeRed'     },
+  [EC.Yellow] :{ name:'YELLOW',  css:'#ffd93d', cls:'yellow',  lbl:'Y', flash:'flashYellow',  blade:'bladeYellow'  },
+  [EC.Blue]   :{ name:'BLUE',    css:'#4fc3f7', cls:'blue',    lbl:'B', flash:'flashBlue',    blade:'bladeBlue'    },
+  [EC.Unknown]:{ name:'UNKNOWN', css:'#9e9e9e', cls:'unknown', lbl:'?', flash:'flashUnknown', blade:'bladeUnknown' },
+};
+
+/* ────────────────────────────────────────────────
+   LCG PRNG  (matches FB_ColorSimulator exactly)
+────────────────────────────────────────────────── */
+let seed = 0xA3C2B1D4 >>> 0;
+function lcg(){ seed = (Math.imul(seed, 0x6C078965) + 1) >>> 0; return seed; }
+function randInterval(){ return (lcg() % 6001) + 2000; }  // 2000-8000 ms
+function randColor(){
+  const r = lcg() % 4;
+  return [EC.Red, EC.Yellow, EC.Blue, EC.Unknown][r];
+}
+
+/* ────────────────────────────────────────────────
+   FB_ColorSimulator state
+────────────────────────────────────────────────── */
+let simInterval  = randInterval();
+let simRemaining = simInterval;
+
+/* ────────────────────────────────────────────────
+   FB_ConveyorBelt state
+────────────────────────────────────────────────── */
+let bBusy       = false;
+let eActive     = EC.None;
+let posMM       = 0;
+let colorSensed = false;
+let sorterFired = false;
+let holdMs      = 0;
+
+/* ────────────────────────────────────────────────
+   Sparkline ring buffer
+────────────────────────────────────────────────── */
+const SPARK_N  = 24;
+const sparkBuf = new Array(SPARK_N).fill(0);
+const sparkEl  = document.getElementById('spark');
+const sparkBars= [];
+for(let i=0;i<SPARK_N;i++){
+  const b=document.createElement('div');
+  b.className='spark-bar';
+  b.style.background='#30363d';
+  sparkEl.appendChild(b);
+  sparkBars.push(b);
+}
+
+/* ────────────────────────────────────────────────
+   Belt stripe animation
+────────────────────────────────────────────────── */
+const stripeG   = document.getElementById('stripes');
+let   stripeOff = 0;
+const stripes   = [];
+for(let x=-48;x<1300;x+=38){
+  const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+  l.setAttribute('y1','118'); l.setAttribute('y2','182');
+  l.setAttribute('stroke','#2d333b'); l.setAttribute('stroke-width','5');
+  l.setAttribute('stroke-linecap','square');
+  l.dataset.base = x;
+  stripeG.appendChild(l);
+  stripes.push(l);
+}
+
+/* ────────────────────────────────────────────────
+   Logging
+────────────────────────────────────────────────── */
+const logEl   = document.getElementById('logScroll');
+const logBuf  = [];
+function log(msg, cls='sys'){
+  const t = new Date();
+  const ts= [t.getHours(),t.getMinutes(),t.getSeconds(),t.getMilliseconds()]
+    .map((v,i)=>String(v).padStart(i<3?2:3,'0')).join(i=>i===3?'.':':');
+  const s = `${t.getHours().toString().padStart(2,'0')}:${t.getMinutes().toString().padStart(2,'0')}:${t.getSeconds().toString().padStart(2,'0')}.${t.getMilliseconds().toString().padStart(3,'0')}`;
+  const d = document.createElement('div');
+  d.className = `log-entry ${cls}`;
+  d.textContent = `[${s}]  ${msg}`;
+  logEl.prepend(d);
+  logBuf.push(d);
+  if(logBuf.length>100){ logBuf.shift().remove(); }
+}
+
+/* ────────────────────────────────────────────────
+   DOM shorthand refs
+────────────────────────────────────────────────── */
+const itemCircle   = document.getElementById('itemCircle');
+const itemLabel    = document.getElementById('itemLabel');
+const ringArc      = document.getElementById('ringArc');
+const ringNum      = document.getElementById('ringNum');
+const RING_CIRC    = 2*Math.PI*33;  // 207.3
+const sensorFlash  = document.getElementById('sensorFlash');
+
+/* ────────────────────────────────────────────────
+   Eject animation state
+────────────────────────────────────────────────── */
+let eject = null;  // {x,y,vx,vy,color,life}
+
+/* ────────────────────────────────────────────────
+   MAIN TICK  – mirrors MAIN.TcPOU exactly
+────────────────────────────────────────────────── */
+let lastT = null;
+let cycleCount = 0;
+let cycleSum   = 0;
+
+function tick(now){
+  // Δt
+  if(lastT===null){ lastT=now; requestAnimationFrame(tick); return; }
+  const dt = Math.min(now-lastT, 100);
+  lastT = now;
+  cycleSum += dt; cycleCount++;
+  if(cycleCount>=30){
+    document.getElementById('cycleMs').textContent =
+      (cycleSum/cycleCount).toFixed(1)+' ms';
+    cycleSum=cycleCount=0;
+  }
+
+  /* ── clear actuator flags ── */
+  G.bColorSensorFired = false;
+  G.bActuatorRed = G.bActuatorYellow = G.bActuatorBlue = G.bActuatorUnknown = false;
+
+  /* ════════════════════════════════
+     FB_ColorSimulator
+  ════════════════════════════════ */
+  if(G.bSimEnable){
+    simRemaining -= dt;
+    G.rNextItemSec = Math.max(0, simRemaining/1000);
+
+    if(simRemaining <= 0){
+      if(!bBusy){
+        eActive     = randColor();
+        bBusy       = true;
+        posMM       = 0;
+        colorSensed = false;
+        sorterFired = false;
+        holdMs      = 0;
+        const m = META[eActive];
+        log(`▶  Item injected — ${m.name}`, m.cls);
+      }
+      simInterval  = randInterval();
+      simRemaining = simInterval;
+    }
+  }
+
+  /* ════════════════════════════════
+     FB_ConveyorBelt
+  ════════════════════════════════ */
+  // move
+  if(bBusy && G.bBeltRunCmd && G.bSimEnable)
+    posMM += G.rBeltSpeed * dt / 1000;
+
+  // colour sensor
+  if(bBusy && !colorSensed && posMM >= G.rPos_Sensor){
+    G.bColorSensorFired = true;
+    G.eDetectedColor    = eActive;
+    colorSensed         = true;
+    G.sDetectedName     = META[eActive].name;
+    log(`🔍  Sensor → ${META[eActive].name}`, META[eActive].cls);
+    flashSensor();
+    updateDetBadge(eActive);
+  }
+
+  // diverter
+  if(bBusy && colorSensed && !sorterFired){
+    let hit = false;
+    if(eActive===EC.Red     && posMM>=G.rPos_ActRed   ){ G.bActuatorRed=true;     G.nCountRed++;     hit=true; }
+    if(eActive===EC.Yellow  && posMM>=G.rPos_ActYellow ){ G.bActuatorYellow=true;  G.nCountYellow++;  hit=true; }
+    if(eActive===EC.Blue    && posMM>=G.rPos_ActBlue   ){ G.bActuatorBlue=true;    G.nCountBlue++;    hit=true; }
+    if(eActive===EC.Unknown && posMM>=G.rPos_ActUnknown){ G.bActuatorUnknown=true; G.nCountUnknown++; hit=true; }
+    if(hit){
+      G.nCountTotal++;
+      sorterFired = true;
+      holdMs      = 180;
+      const m = META[eActive];
+      log(`✔  Sorted → ${m.name} bin   [total: ${G.nCountTotal}]`, m.cls);
+      flashDiverter(m.flash);
+      pushSpark(eActive);
+      startEject(posMM, eActive);
+    }
+  }
+
+  // hold timer
+  if(holdMs > 0){
+    holdMs -= dt;
+    if(eActive===EC.Red)     G.bActuatorRed=true;
+    if(eActive===EC.Yellow)  G.bActuatorYellow=true;
+    if(eActive===EC.Blue)    G.bActuatorBlue=true;
+    if(eActive===EC.Unknown) G.bActuatorUnknown=true;
+  }
+
+  // exit
+  if(bBusy && posMM >= G.rPos_Exit){
+    bBusy=false; eActive=EC.None; posMM=0;
+  }
+
+  G.bItemOnBelt = bBusy;
+  G.eItemColor  = eActive;
+  G.rItemPosMM  = posMM;
+
+  /* ── render ── */
+  render(dt);
+  requestAnimationFrame(tick);
+}
+
+/* ────────────────────────────────────────────────
+   RENDER
+────────────────────────────────────────────────── */
+// SVG coordinate: x = 28 + posMM
+// (belt starts at x=28, pos 0 mm = infeed)
+function mmToX(mm){ return 28 + mm; }
+
+function render(dt){
+  /* belt stripes */
+  if(G.bBeltRunCmd && G.bSimEnable && bBusy){
+    stripeOff = (stripeOff + G.rBeltSpeed * dt * 0.001) % 38;
+  }
+  stripes.forEach(l=>{
+    const x = +l.dataset.base + stripeOff;
+    l.setAttribute('x1',x); l.setAttribute('x2',x+16);
+  });
+
+  /* item circle */
+  if(bBusy && !eject){
+    const m = META[eActive];
+    const cx = mmToX(posMM);
+    itemCircle.setAttribute('cx',cx);
+    itemCircle.setAttribute('cy','150');
+    itemCircle.setAttribute('fill', m.css);
+    itemCircle.style.opacity='1';
+    itemLabel.setAttribute('x',cx);
+    itemLabel.setAttribute('y','150');
+    itemLabel.textContent = m.lbl;
+    itemLabel.style.opacity='1';
+  } else if(!bBusy && !eject){
+    itemCircle.style.opacity='0';
+    itemLabel.style.opacity='0';
+  }
+
+  /* eject arc */
+  if(eject){
+    eject.x  += eject.vx;
+    eject.y  += eject.vy;
+    eject.vy -= 0.6;
+    eject.life--;
+    const op = Math.max(0, eject.life/25);
+    itemCircle.setAttribute('cx', eject.x);
+    itemCircle.setAttribute('cy', eject.y);
+    itemCircle.style.opacity = op;
+    itemLabel.setAttribute('x', eject.x);
+    itemLabel.setAttribute('y', eject.y);
+    itemLabel.style.opacity = op;
+    if(eject.life<=0){ eject=null; }
+  }
+
+  /* diverter blades */
+  setBladeActive('bladeRed',     G.bActuatorRed,     '#ff6b6b');
+  setBladeActive('bladeYellow',  G.bActuatorYellow,  '#ffd93d');
+  setBladeActive('bladeBlue',    G.bActuatorBlue,    '#4fc3f7');
+  setBladeActive('bladeUnknown', G.bActuatorUnknown, '#9e9e9e');
+
+  /* counters */
+  document.getElementById('cRed').textContent     = G.nCountRed;
+  document.getElementById('cYellow').textContent  = G.nCountYellow;
+  document.getElementById('cBlue').textContent    = G.nCountBlue;
+  document.getElementById('cUnknown').textContent = G.nCountUnknown;
+  document.getElementById('cTotal').textContent   = G.nCountTotal;
+
+  /* countdown ring */
+  const maxS = simInterval/1000;
+  const remS = G.rNextItemSec;
+  const frac = maxS>0 ? Math.max(0,Math.min(1, remS/maxS)) : 0;
+  ringArc.setAttribute('stroke-dashoffset', RING_CIRC*(1-frac));
+  ringNum.textContent = bBusy ? '◼' : remS.toFixed(1);
+
+  /* header status */
+  const dot  = document.getElementById('statusDot');
+  const stxt = document.getElementById('statusText');
+  if(!G.bSimEnable){
+    dot.className='pill-dot err';  stxt.textContent='Simulation Stopped';
+  } else if(!G.bBeltRunCmd){
+    dot.className='pill-dot warn'; stxt.textContent='Belt Stopped';
+  } else {
+    dot.className='pill-dot';      stxt.textContent='Simulation Running';
+  }
+}
+
+function setBladeActive(id, active, color){
+  const el = document.getElementById(id);
+  if(active){
+    el.setAttribute('stroke', color);
+    el.setAttribute('stroke-width','5');
+    el.style.filter=`drop-shadow(0 0 6px ${color})`;
+    el.style.opacity='1';
+  } else {
+    el.setAttribute('stroke-width','3');
+    el.style.filter='';
+    el.style.opacity='.45';
+  }
+}
+
+/* ────────────────────────────────────────────────
+   Visual effects
+────────────────────────────────────────────────── */
+function flashSensor(){
+  sensorFlash.style.transition='opacity .04s';
+  sensorFlash.style.opacity='1';
+  setTimeout(()=>{ sensorFlash.style.transition='opacity .5s'; sensorFlash.style.opacity='0'; },80);
+}
+
+function flashDiverter(id){
+  const el=document.getElementById(id);
+  el.style.transition='opacity .04s';
+  el.style.opacity='.5';
+  setTimeout(()=>{ el.style.transition='opacity .6s'; el.style.opacity='0'; },100);
+}
+
+function startEject(mm, color){
+  const m = META[color];
+  itemCircle.setAttribute('fill', m.css);
+  itemLabel.textContent = m.lbl;
+  eject = { x: mmToX(mm), y: 150, vx: 3.5, vy: -5, life: 28 };
+}
+
+function updateDetBadge(c){
+  const m = META[c];
+  const b = document.getElementById('detBadge');
+  b.textContent     = m.name;
+  b.style.background = m.css+'25';
+  b.style.borderColor= m.css;
+  b.style.color      = m.css;
+}
+
+const SPARK_COLORS = {
+  [EC.Red]:'#ff6b6b',[EC.Yellow]:'#ffd93d',
+  [EC.Blue]:'#4fc3f7',[EC.Unknown]:'#9e9e9e'
+};
+function pushSpark(c){
+  sparkBuf.push(c); sparkBuf.shift();
+  sparkBars.forEach((b,i)=>{
+    const v = sparkBuf[i];
+    b.style.height     = v ? '48px' : '2px';
+    b.style.background = v ? SPARK_COLORS[v] : '#30363d';
+    b.style.opacity    = v ? '1' : '0.25';
+  });
+}
+
+/* ────────────────────────────────────────────────
+   Control handlers  (= HMI button callbacks)
+────────────────────────────────────────────────── */
+function toggleSim(){
+  G.bSimEnable = !G.bSimEnable;
+  const btn = document.getElementById('btnSim');
+  btn.classList.toggle('on', G.bSimEnable);
+  log(G.bSimEnable ? '▶  Simulation started' : '■  Simulation stopped');
+}
+function toggleBelt(){
+  G.bBeltRunCmd = !G.bBeltRunCmd;
+  const btn = document.getElementById('btnBelt');
+  btn.classList.toggle('on', G.bBeltRunCmd);
+  log(G.bBeltRunCmd ? '▶  Belt motor ON' : '■  Belt motor OFF');
+}
+function setSpeed(v){
+  G.rBeltSpeed = v;
+  document.getElementById('speedLbl').textContent = v;
+}
+function resetCounters(){
+  G.nCountRed=G.nCountYellow=G.nCountBlue=G.nCountUnknown=G.nCountTotal=0;
+  sparkBuf.fill(0);
+  sparkBars.forEach(b=>{ b.style.height='2px'; b.style.background='#30363d'; b.style.opacity='0.25'; });
+  log('↺  Counters reset');
+}
+
+/* ────────────────────────────────────────────────
+   Boot
+────────────────────────────────────────────────── */
+log('System ready — simulation starting…');
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
