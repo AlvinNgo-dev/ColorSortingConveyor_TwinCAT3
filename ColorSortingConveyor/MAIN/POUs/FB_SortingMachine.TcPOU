@@ -31,7 +31,17 @@ END_VAR]]></Declaration>
       <ST><![CDATA[sensor(sensorID := machineID);
 
 currentColor := sensor.GetColor();
-
+IF bEnabled THEN 
+	redDiverter.Enable();
+	blueDiverter.Enable();
+	yellowDiverter.Enable();
+	rejectDiverter.Enable();
+ELSE
+	redDiverter.Disable();
+	blueDiverter.Disable();
+	yellowDiverter.Disable();
+	rejectDiverter.Disable();
+END_IF
 
 (* Sorting decision *)
 CASE currentColor OF
